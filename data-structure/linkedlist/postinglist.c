@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include "linkedlist.h"
 #include "postinglist.h"
 
 
@@ -21,8 +20,18 @@ void insert(postinglist* plptr, int value)
 
 
 node* get(postinglist pl, int value)
-{}
+{
+	if (pl == NULL) return NULL;
+	if (pl->value < value) return get(pl->next, value);
+	if (pl->value == value) return (node*)pl;
+	if (pl->value > value) return NULL;
+}
 
 
-void delete(postinglist pl, int value)
-{}
+void delete(postinglist* pl, int value)
+{
+	if ((*pl) == NULL) return;
+	else if ((*pl)->value < value) delete(&((*pl)->next), value);
+	else if ((*pl)->value == value) deleteNode(&(*pl));
+	else if ((*pl)->value > value) return;
+}
