@@ -1,32 +1,16 @@
 #include <stdlib.h>
-#include <assert.h>
-#include <stdio.h>
+#include "skiplist.h"
 
-# define MAX_LEVEL (3)
-// 0, 1, 2, 3
-
-typedef struct node
-{
-	int isHeader;
-	int value;
-	int level;
-	int _;
-	int __;
-	int ___; // alignemnt in 64bit machine
-	struct node *skip[1];
-} node;
-
-typedef node* skiplist;
-
-
-void printSkipList(skiplist);
+#define bool	int
+#define true	1
+#define false	0
 
 
 # define LEVEL_LEN 15
 int levels[LEVEL_LEN] = {0, 1, 0, 2, 0, 3, 1, 0, 2, 0, 0 ,1, 0, 0, 1};
 static int _ri = 0;
 
-int randomLevel()
+static int randomLevel()
 {
 	if (_ri > LEVEL_LEN)
 		_ri = 0;
@@ -34,9 +18,10 @@ int randomLevel()
 }
 
 
-node* createNode(int value, int level)
+node* createNode(int value)
 {
 	int l;
+	int level = randomLevel();
 	node* n = (node*)malloc(sizeof(node) + level * sizeof(node*));
 	n->isHeader = 0;
 	n->value = value;
@@ -48,131 +33,87 @@ node* createNode(int value, int level)
 	return n;
 }
 
-void releaseNode(node* n)
+
+skiplist createSkipList()
 {
-	free(n);
-}
-
-
-node* skipInLevel(node* n, int level)
-{
-	return n->skip[level];
-}
-
-
-node* searchPos(skiplist sl, int v, int l)
-{
-	// search for the first node that is just lt value v, in level l
-	//assert(sl != NULL);
-	node *r, *next = skipInLevel(sl, l);
-
-	if (next == NULL)
-	{
-		return sl;
-	}
-	if (next->value < v)
-	{
-		r = searchPos(next, v, l);
-		if (r == NULL)
-			return sl;
-		else
-			return r;
-	}
-	else if (next->value >= v)
-	{
-		return sl;
-	}
-}
-
-
-node* getNode(skiplist sl, int value)
-{
+	skiplist sl = (skiplist)malloc((MAX_LEVEL+1) * sizeof(node*));
 	int i;
-	node* n = sl;
-	for (i = MAX_LEVEL; i >= 0; i--)
-	{
-		n = searchPos(n, value, i);
-	}
-	return n;
+	for (i=0; i<=MAX_LEVEL; i++)
+		sl[i] = NULL;
+	return sl;
 }
 
 
-void insertNode(skiplist sl, node* n)
+static bool _insertValue(int level, skiplist sl, node* new_node)
 {
-	int l = MAX_LEVEL, i;
-	node* _n = sl;
-	for (i = l; i >= 0; i--)
+	node* n = sl[level];
+	bool r;
+	if (n == NULL)
 	{
-		_n = searchPos(_n, n->value, i);
-		if (i <= n->level)
+		if (level > new_node->level)
+			return _insertValue(level-1, sl, new_node);
+		else if (level <= new_node->level)
 		{
-			n->skip[i] = _n->skip[i];
-			_n->skip[i] = n;
+			if (level > 0)
+			{
+				r = _insertValue(level-1, sl, new_node);
+				if (r) sl[level] = new_node;
+				return r;
+			}
+			else
+			{
+				sl[level] = new_node;
+				return true;
+			}
 		}
 	}
+	else if (n->value > new_node->value)
+	{
+		if (level >= 0)
+		{
+			r = _insertValue(level-1, sl, new_node);
+			if (r && level >= new_node->level)
+			{
+				(new_node->skip)[level] = sl[level];
+				sl[level] = new_node;
+			}
+			return r;
+		}
+		else
+		{
+			(new_node->skip)[level] = sl[level];
+			sl[level] = new_node;
+			return true;
+		}
+	}
+	else if (n->value == new_node->value)
+		return false;
+	else if (n->value < new_node->value)
+		return _insertValue(level, (skiplist)(&(n->skip)), new_node);
 }
 
 
 void insertValue(skiplist sl, int value)
 {
-	int level;
-	node* n;
-	//n = getNode(sl, value);
-	//if (n != NULL && skipInLevel(n, 0)->value == value) return;
-	level = randomLevel();
-	n = createNode(value, level);
-	insertNode(sl, n);
-}
-
-
-void deleteValue(skiplist sl, int value)
-{
-	int l = MAX_LEVEL, i;
-	node* n = sl;
-	node* next;
-	for (i = l; i >= 0; i--)
-	{
-		n = searchPos(n, value, l);
-		next = skipInLevel(n, i);
-		if (next != NULL && next->isHeader == 0 && next->value == value) {
-			n->skip[i] = next->skip[i];
-			releaseNode(next);
-		}
-	}
-}
-
-
-skiplist createSkipList()
-{
-	node* n = createNode(0, MAX_LEVEL);
-	n->isHeader = 1;
-	return n;
-}
-
-
-void printSkipList(skiplist sl)
-{
-	node* n = skipInLevel(sl, 0);
-	do {
-		printf("%d ", n->value);
-		n = skipInLevel(n, 0);
-	} while (n);
-	printf("\n");
+	node* new_node = createNode(value);
+	_insertValue(MAX_LEVEL, sl, new_node);
 }
 
 
 void main()
 {
 	skiplist sl = createSkipList();
-	insertValue(sl, 4);
+	insertValue(sl, 1);
+	insertValue(sl, 1);
 	insertValue(sl, 5);
+	insertValue(sl, 9);
 	insertValue(sl, 8);
-	insertValue(sl, 6);
-	insertValue(sl, 2);
-	insertValue(sl, 10);
 	insertValue(sl, 4);
-	insertValue(sl, 22);
-	insertValue(sl, 10);
-	insertValue(sl, 19);
-	printSkipList(sl);
+	insertValue(sl, 7);
+	insertValue(sl, 6);
+	insertValue(sl, 7);
 }
+
+#undef bool
+#undef true
+#undef false
