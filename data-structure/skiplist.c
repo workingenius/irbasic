@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <assert.h>
 #include "skiplist.h"
 
 #define bool	int
@@ -6,7 +7,7 @@
 #define false	0
 
 
-# define LEVEL_LEN 15
+# define LEVEL_LEN (15)
 int levels[LEVEL_LEN] = {0, 1, 0, 2, 0, 3, 1, 0, 2, 0, 0 ,1, 0, 0, 1};
 static int _ri = 0;
 
@@ -14,7 +15,7 @@ static int randomLevel()
 {
 	if (_ri > LEVEL_LEN)
 		_ri = 0;
-	return levels[_ri++];
+	return levels[_ri];
 }
 
 
@@ -28,7 +29,7 @@ node* createNode(int value)
 	n->level = level;
 	for (l = 0; l <= level; l++)
 	{
-		n->skip[l] = NULL;
+		(n->skip)[l] = NULL;
 	}
 	return n;
 }
@@ -89,14 +90,35 @@ static bool _insertValue(int level, skiplist sl, node* new_node)
 	else if (n->value == new_node->value)
 		return false;
 	else if (n->value < new_node->value)
-		return _insertValue(level, (skiplist)(&(n->skip)), new_node);
+		return _insertValue(level, (skiplist)(n->skip), new_node);
 }
 
 
 void insertValue(skiplist sl, int value)
 {
 	node* new_node = createNode(value);
-	_insertValue(MAX_LEVEL, sl, new_node);
+	if (_insertValue(MAX_LEVEL, sl, new_node))
+		_ri++;
+}
+
+
+void assertIncreasing(skiplist sl)
+{
+	int level;
+	node *n1, *n2;
+	for (level=MAX_LEVEL; level>=0; level--)
+	{
+		n1 = sl[level];
+		if (n1 == NULL) continue;
+		n2 = (n1->skip)[level];
+		if (n2 == NULL) continue;
+		while(n1 && n2)
+		{
+			assert(n2->value > n1->value);
+			n1 = n2;
+			n2 = (n2->skip)[level];
+		}
+	}
 }
 
 
@@ -104,14 +126,22 @@ void main()
 {
 	skiplist sl = createSkipList();
 	insertValue(sl, 1);
+	assertIncreasing(sl);
 	insertValue(sl, 1);
+	assertIncreasing(sl);
 	insertValue(sl, 5);
+	assertIncreasing(sl);
 	insertValue(sl, 9);
+	assertIncreasing(sl);
 	insertValue(sl, 8);
-	insertValue(sl, 4);
-	insertValue(sl, 7);
-	insertValue(sl, 6);
-	insertValue(sl, 7);
+	//assertIncreasing(sl);
+	//insertValue(sl, 4);
+	//assertIncreasing(sl);
+	//insertValue(sl, 7);
+	//assertIncreasing(sl);
+	//insertValue(sl, 6);
+	//assertIncreasing(sl);
+	//insertValue(sl, 7);
 }
 
 #undef bool

@@ -1,5 +1,5 @@
 
-#define MAX_LEVEL (15)
+#define MAX_LEVEL (3)
 
 typedef struct node
 {
